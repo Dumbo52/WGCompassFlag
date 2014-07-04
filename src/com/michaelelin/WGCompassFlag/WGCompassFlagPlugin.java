@@ -1,5 +1,6 @@
 package com.michaelelin.WGCompassFlag;
 
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -11,6 +12,8 @@ import com.sk89q.worldguard.protection.flags.StateFlag;
 public class WGCompassFlagPlugin extends JavaPlugin {
     
     private WGCompassFlagListener listener;
+    private Player nextTP;
+    private long timestamp;
 
     public StateFlag COMPASS;
 
@@ -36,6 +39,15 @@ public class WGCompassFlagPlugin extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
         }
         return mainClass.cast(plugin);
+    }
+    
+    public void expectTeleport(Player player) {
+        this.nextTP = player;
+        this.timestamp = player.getPlayerTime();
+    }
+    
+    public boolean hasCompassed(Player player) {
+        return this.nextTP == player && this.timestamp == player.getPlayerTime();
     }
 
 }

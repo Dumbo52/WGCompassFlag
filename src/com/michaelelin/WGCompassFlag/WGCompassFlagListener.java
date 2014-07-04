@@ -5,10 +5,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.Event.Result;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
+import com.sk89q.worldedit.blocks.BlockType;
+import com.sk89q.worldedit.LocalWorld;
+import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldguard.LocalPlayer;
@@ -31,32 +35,27 @@ public class WGCompassFlagListener implements Listener {
     @EventHandler(priority = EventPriority.LOW)
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getItem() != null && event.getItem().getTypeId() == worldedit.getWorldEdit().getConfiguration().navigationWand) {
-            Player player = event.getPlayer();
-            if (!worldguard.getGlobalRegionManager().hasBypass(player, player.getWorld())) {
-                if ((event.getAction() == Action.LEFT_CLICK_BLOCK || event.getAction() == Action.LEFT_CLICK_AIR) && event.getPlayer().hasPermission("worldedit.navigation.jumpto.tool")
-                        || (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) && event.getPlayer().hasPermission("worldedit.navigation.thru.tool")) {
-                    ApplicableRegionSet setAtPlayer = worldguard.getGlobalRegionManager().get(player.getWorld()).getApplicableRegions(player.getLocation());
-                    LocalPlayer localPlayer = worldguard.wrapPlayer(player);
-                    if (setAtPlayer.canBuild(localPlayer) || setAtPlayer.allows(plugin.COMPASS, localPlayer)) {
-                        WorldVector vec = worldedit.wrapPlayer(player).getSolidBlockTrace(worldedit.getWorldEdit().getConfiguration().navigationWandMaxDistance);
-                        if (vec != null) {
-                            ApplicableRegionSet setAtClicked = worldguard.getGlobalRegionManager().get(player.getWorld()).getApplicableRegions(vec);
-                            if (!setAtClicked.canBuild(localPlayer) && !setAtClicked.allows(plugin.COMPASS, localPlayer)) {
-                                cancelEvent(event);
-                            }
-                        }
-                    }
-                    else {
-                        cancelEvent(event);
-                    }
-                }
-            }
+            plugin.expectTeleport(event.getPlayer());
         }
     }
     
-    private void cancelEvent(PlayerInteractEvent event) {
-        event.setCancelled(true);
-        event.setUseItemInHand(Result.DENY);
-        event.getPlayer().sendMessage(ChatColor.DARK_RED + "You don't have permission to use that in this area.");
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
+        if (event.getMessage().equalsIgnoreCase("/jumpto") || event.getMessage().equalsIgnoreCase("/thru")) {
+            plugin.expectTeleport(event.getPlayer());
+        }
+    }
+    
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerTeleport(PlayerTeleportEvent event) {
+        if (plugin.hasCompassed(event.getPlayer())) {
+            ApplicableRegionSet setAtLocation = worldguard.getGlobalRegionManager().get(event.getFrom().getWorld()).getApplicableRegions(event.getFrom());
+            ApplicableRegionSet setAtTeleport = worldguard.getGlobalRegionManager().get(event.getTo().getWorld()).getApplicableRegions(event.getTo());
+            LocalPlayer player = worldguard.wrapPlayer(event.getPlayer());
+            if (!worldguard.getGlobalRegionManager().hasBypass(player, event.getPlayer().getWorld()) && (!setAtLocation.canBuild(player) && !setAtLocation.allows(plugin.COMPASS, player) || !setAtTeleport.canBuild(player) && !setAtTeleport.allows(plugin.COMPASS, player))) {
+                event.setCancelled(true);
+                event.getPlayer().sendMessage(ChatColor.DARK_RED + "You don't have permission to use that in this area.");
+            }
+        }
     }
 }
