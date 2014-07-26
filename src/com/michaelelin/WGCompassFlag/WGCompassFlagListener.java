@@ -41,7 +41,7 @@ public class WGCompassFlagListener implements Listener {
     
     @EventHandler(ignoreCancelled = true)
     public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
-        if (event.getMessage().equalsIgnoreCase("/jumpto") || event.getMessage().equalsIgnoreCase("/thru")) {
+        if (event.getMessage().equalsIgnoreCase("/jumpto") || event.getMessage().equalsIgnoreCase("/j") || event.getMessage().equalsIgnoreCase("/thru")) {
             plugin.expectTeleport(event.getPlayer());
         }
     }
